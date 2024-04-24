@@ -1,55 +1,68 @@
+import glob
 import os
 import re
 import textwrap
+import warnings
 
-from spotipy.oauth2 import SpotifyClientCredentials
 import spotipy
 import json
 import segno
+from fpdf import FPDF, Align
+from spotipy.oauth2 import SpotifyClientCredentials
 from PIL import Image, ImageDraw, ImageFont
+import drawsvg as draw
 
 
 class Song:
     QR_SCALE = 10
     IMAGE_SIZE = None
+    FONT = ImageFont.truetype("DejaVuSans.ttf", 20)
 
     def __init__(self, track: dict):
         self.data = track
 
     def save_qr(self, playlist_id, use_cached=True):
-        pth = f"cache/{playlist_id}/{self.id}_qr.png"
+        pth = f"cache/{playlist_id}/{self.id}_qr.svg"
         if not os.path.exists(pth) or not use_cached:
             qr = segno.make_qr(self.href)
-            qr.save(pth, scale=Song.QR_SCALE)
+            qr.save(pth, kind="svg")
 
     def save_text(self, playlist_id, use_cached=False):
+        W = H = 400
+        scaling = 1 / 370 * W
 
-        def add_text(percent_x, percent_y, text, font_size=20):
+        def add_text(
+            percent_x, percent_y, text, font_size=20, wrap_width=20, max_lines=3
+        ):
             assert 0 <= percent_x <= 1
             assert 0 <= percent_y <= 1
-            W, H = Song.IMAGE_SIZE
-            _, _, w, h = d.multiline_textbbox(
-                (0, 0), text, align="center", font_size=font_size
+            font_size *= scaling
+            x, y = 0, round(percent_y * H) - H / 2
+            wrapped = textwrap.wrap(text, width=int(wrap_width * scaling))
+            overfull = "..." if len(wrapped) > max_lines else ""
+            text = "\n".join(wrapped[:max_lines]) + overfull
+            svg_text = draw.Text(
+                text,
+                font_size,
+                x=x,
+                y=y,
+                text_anchor="middle",
+                fill="black",
+                font_family="Arial",
             )
-            x, y = round(percent_x * W), round(percent_y * H)
-            x, y = (W - w) / 2 - W / 2 + x, (H - h) / 2 - H / 2 + y
+            d.append(svg_text)
 
-            d.multiline_text(
-                (x, y), text, fill=(0, 0, 0), align="center", font_size=font_size
-            )
+        outfile = f"cache/{playlist_id}/{self.id}_text.png"
+        if use_cached and os.path.exists(outfile):
+            return
 
-        if Song.IMAGE_SIZE is None:
-            with Image.open(f"cache/{playlist_id}/{self.id}_qr.png") as im:
-                Song.IMAGE_SIZE = im.size
-        img = Image.new("RGB", Song.IMAGE_SIZE, (255, 255, 255))
-        d = ImageDraw.Draw(img)
-        add_text(0.5, 0.2, self.artist, 20)
-        add_text(0.5, 0.47, self.release, 100)
-        add_text(0.5, 0.8, self.name, 20)
-        add_text(0.5, 0.9, self.album, 15)
-        if "Tango" in self.name:
-            img.show()  # todo continue at: Wenn sie diesen Tango hört - Remastered 2002 (umlaute, text width)
-        img.save(f"cache/{playlist_id}/{self.id}_text.png")
+        d = draw.Drawing(W, H, origin="center")
+        # d.append(draw.Rectangle(x=-W / 2, y=-W / 2, width=W, height=H, stroke='gray', fill='none'))
+        add_text(0.5, 0.2, self.artist, 30, max_lines=2)
+        add_text(0.5, 0.55, self.release, 100)
+        add_text(0.5, 0.7, self.name, 20)
+        add_text(0.5, 0.85, self.album, 15)
+        d.save_png(outfile)
 
     @property
     def id(self) -> str:
@@ -73,7 +86,7 @@ class Song:
 
     @property
     def artist(self) -> str:
-        return ", ".join([artist["name"] for artist in self.data["artists"]])
+        return ", ".join([artist["name"] for artist in self.data["artists"][:2]])
 
     @property
     def popularity(self) -> str:
@@ -99,9 +112,8 @@ class Playlist:
         self.json_data = {}
         self.extract_json()
 
-        self.tracks = [
-            Song(item["track"]) for item in self.json_data["tracks"]["items"]
-        ]
+        tracks = [Song(item["track"]) for item in self.json_data["tracks"]["items"]]
+        self.tracks = {tr.id: tr for tr in tracks}
 
     @property
     def name(self) -> str:
@@ -128,12 +140,20 @@ class Playlist:
                 json.dump(self.json_data, f)
 
     def save_qr_codes(self):
-        for track in self.tracks:
+        for track in self.tracks.values():
             track.save_qr(self.playlist_id)
 
+    def get_track(self, track_id: str):
+        return self.tracks[track_id]
+
     def save_text(self):
-        for track in self.tracks:
+        for track in self.tracks.values():
             track.save_text(self.playlist_id)
+
+    def generate_pdf(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            PDFCreator(self).generate_pdf(f"output/{self.playlist_id}--{self.name}.pdf")
 
     @staticmethod
     def id_from_url(url):
@@ -143,15 +163,84 @@ class Playlist:
         return (
             f"\nPlaylist: {self.name} ({self.href})"
             + "\n\n"
-            + "\n".join([str(track) for track in self.tracks])
+            + "\n".join([str(track) for track in self.tracks.values()])
         )
 
 
+class PDFCreator:
+    def __init__(self, playlist: Playlist):
+        self.playlist = playlist
+
+    def generate_pdf(self, outfile):
+        self.playlist.save_qr_codes()
+        self.playlist.save_text()
+        pdf = FPDF()
+        pdf.set_font("Times", size=12)
+        qr_codes = (
+            img
+            for img in sorted(glob.glob(f"cache/{self.playlist.playlist_id}/*qr.svg"))
+        )
+        text_imgs = (
+            img
+            for img in sorted(glob.glob(f"cache/{self.playlist.playlist_id}/*text.png"))
+        )
+
+        W, H = pdf.epw, pdf.eph
+        margin = pdf.t_margin
+        w = W / 3
+
+        def next_of(gen, size=12):
+            out = []
+            while len(out) < size:
+                try:
+                    out.append(next(gen))
+                except StopIteration:
+                    while len(out) % 3 != 0:
+                        out.append(None)
+                    break
+            return (img for img in out)
+
+        def add_img(img, pos):
+            if img is None:
+                return
+            pdf.image(img, w=w, h=w, x=pos, y=margin + row * w)
+
+        while True:
+            page1 = next_of(qr_codes)
+            try:
+                images = [next(page1) for _ in range(3)]
+                if images[0] is None:
+                    break
+                pdf.add_page()
+                for row in range(4):
+                    add_img(images[0], Align.L)
+                    add_img(images[1], Align.C)
+                    add_img(images[2], Align.R)
+                    images = [next(page1) for _ in range(3)]
+            except StopIteration:
+                pass
+            page2 = next_of(text_imgs)
+            try:
+                images = [next(page2) for _ in range(3)][::-1]
+                if images[0] is None:
+                    break
+                pdf.add_page()
+                for row in range(4):
+                    add_img(images[0], Align.L)
+                    add_img(images[1], Align.C)
+                    add_img(images[2], Align.R)
+                    images = [next(page2) for _ in range(3)][::-1]
+            except StopIteration:
+                break
+        pdf.output(outfile)
+
+
 def main():
-    playlist = Playlist("2S5UtSsnlyMDzawaJuuGzs")
+    playlist = Playlist(
+        "https://open.spotify.com/playlist/37i9dQZF1DX1tz6EDao8it?si=b7d541eff8fe49a2"
+    )
     print(playlist)
-    playlist.save_qr_codes()
-    playlist.save_text()
+    playlist.generate_pdf()
 
 
 if __name__ == "__main__":

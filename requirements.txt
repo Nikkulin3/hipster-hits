@@ -2,3 +2,5 @@ pre-commit
 spotipy
 segno
 pillow
+fpdf2
+drawsvg[raster]~=2.0
