@@ -248,4 +248,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except spotipy.oauth2.SpotifyOauthError:
+        print(
+            "ERROR: Spotify client id and client secret must be set first. Read Readme.md for instructions."
+        )
+        exit(1)
