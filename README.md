@@ -35,3 +35,4 @@ After obtaining `Client ID` and `Client Secret`, paste them into the file `gener
 
 - Right click file `generate.bat->more options->edit` (or open with text editor) and change Spotify Playlist URL, then save.
 - Double click file `generate.bat`, the output PDF will be in the `output` folder.
+- Song information and images are being cached locally, start fresh (playlist update, etc.) with deleting the `cache` folder.

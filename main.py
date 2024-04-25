@@ -4,6 +4,8 @@ import re
 import sys
 import textwrap
 import warnings
+from typing import Generator, Union
+
 import drawsvg as draw
 import spotipy
 import json
@@ -21,18 +23,23 @@ class Song:
     def __init__(self, track: dict):
         self.data = track
 
-    def save_qr(self, playlist_id, use_cached=True):
+    def save_qr(self, playlist_id: str, use_cached=True):
         pth = f"cache/{playlist_id}/{self.id}_qr.svg"
         if not os.path.exists(pth) or not use_cached:
             qr = segno.make_qr(self.href)
             qr.save(pth, kind="svg")
 
-    def save_text(self, playlist_id, use_cached=False):
+    def save_text(self, playlist_id: str, use_cached: bool = True):
         W = H = 400
         scaling = 1 / 370 * W
 
         def add_text(
-            percent_x, percent_y, text, font_size=20, wrap_width=22, max_lines=3
+            percent_x: float,
+            percent_y: float,
+            text: str,
+            font_size: int = 20,
+            wrap_width: int = 22,
+            max_lines: int = 3,
         ):
             assert 0 <= percent_x <= 1
             assert 0 <= percent_y <= 1
@@ -174,7 +181,7 @@ class PDFCreator:
     def __init__(self, playlist: Playlist):
         self.playlist = playlist
 
-    def generate_pdf(self, outfile):
+    def generate_pdf(self, outfile: str):
         self.playlist.save_qr_codes()
         self.playlist.save_text()
         pdf = FPDF()
@@ -192,7 +199,7 @@ class PDFCreator:
         margin = pdf.t_margin
         w = W / 3
 
-        def next_of(gen, size=12):
+        def next_of(gen: Generator[str, None, None], size=12):
             out = []
             while len(out) < size:
                 try:
@@ -203,7 +210,7 @@ class PDFCreator:
                     break
             return (img for img in out)
 
-        def add_img(img, pos):
+        def add_img(img: str, pos: Union[Align, float]):
             if img is None:
                 return
             pdf.image(img, w=w, h=w, x=pos, y=margin + row * w)
