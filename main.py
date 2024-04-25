@@ -32,7 +32,7 @@ class Song:
         scaling = 1 / 370 * W
 
         def add_text(
-            percent_x, percent_y, text, font_size=20, wrap_width=20, max_lines=3
+            percent_x, percent_y, text, font_size=20, wrap_width=22, max_lines=3
         ):
             assert 0 <= percent_x <= 1
             assert 0 <= percent_y <= 1
@@ -233,6 +233,7 @@ class PDFCreator:
             except StopIteration:
                 break
         pdf.output(outfile)
+        print(outfile)
 
 
 def main():
