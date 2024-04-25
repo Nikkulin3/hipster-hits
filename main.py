@@ -171,9 +171,10 @@ class Playlist:
 
     def __str__(self):
         return (
-            f"\nPlaylist: {self.name} ({self.href})"
+            f"\nPlaylist: {self.name} ({self.href}, {len(self.tracks)} tracks)"
             + "\n\n"
             + "\n".join([str(track) for track in self.tracks.values()])
+            + f"\nPlaylist: {self.name} ({self.href}, {len(self.tracks)} tracks)"
         )
 
 
@@ -186,14 +187,10 @@ class PDFCreator:
         self.playlist.save_text()
         pdf = FPDF()
         pdf.set_font("Times", size=12)
-        qr_codes = (
-            img
-            for img in sorted(glob.glob(f"cache/{self.playlist.playlist_id}/*qr.svg"))
-        )
-        text_imgs = (
-            img
-            for img in sorted(glob.glob(f"cache/{self.playlist.playlist_id}/*text.png"))
-        )
+        qr_filenames = glob.glob(f"cache/{self.playlist.playlist_id}/*qr.svg")
+        img_filenames = glob.glob(f"cache/{self.playlist.playlist_id}/*text.png")
+        qr_codes = (img for img in sorted(qr_filenames))
+        text_imgs = (img for img in sorted(img_filenames))
 
         W, H = pdf.epw, pdf.eph
         margin = pdf.t_margin
@@ -215,12 +212,13 @@ class PDFCreator:
                 return
             pdf.image(img, w=w, h=w, x=pos, y=margin + row * w)
 
-        while True:
+        num_pages = (len(qr_filenames) / 12).__ceil__()
+        for page_number in range(num_pages):
             page1 = next_of(qr_codes)
+            print(f"processing page {page_number+1}/{num_pages}")
+            page_number += 1
             try:
                 images = [next(page1) for _ in range(3)]
-                if images[0] is None:
-                    break
                 pdf.add_page()
                 for row in range(4):
                     add_img(images[0], Align.L)
@@ -232,8 +230,6 @@ class PDFCreator:
             page2 = next_of(text_imgs)
             try:
                 images = [next(page2) for _ in range(3)][::-1]
-                if images[0] is None:
-                    break
                 pdf.add_page()
                 for row in range(4):
                     add_img(images[0], Align.L)
@@ -241,7 +237,7 @@ class PDFCreator:
                     add_img(images[2], Align.R)
                     images = [next(page2) for _ in range(3)][::-1]
             except StopIteration:
-                break
+                pass
         pdf.output(outfile)
         print(f"file saved at: {outfile}")
 
