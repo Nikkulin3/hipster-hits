@@ -6,7 +6,7 @@ For rules of the game, go [here](https://www.spielregeln.de/hitster.html).
 
 The original Hitster **APP WILL NOT WORK** for the created QR-Codes, you must use any other QR-Code Scanner on your Phone.
 
-## Installation for Windows users and Non-Programmers
+## Installation for Windows Users and Non-Programmers
 
 Download and Install the following programs with default parameters:
 
