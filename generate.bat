@@ -10,5 +10,6 @@ set PLAYLIST=https://open.spotify.com/playlist/37i9dQZF1DX1tz6EDao8it
 
 ::::::::::::::::::
 
-venv\Scripts\activate.bat
+call venv\Scripts\activate.bat
 python main.py %PLAYLIST%
+pause

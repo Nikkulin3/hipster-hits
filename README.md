@@ -10,19 +10,18 @@ The original Hitster **APP WILL NOT WORK** for the created QR-Codes, you must us
 
 Download and Install the following programs with default parameters:
 
-- GIT https://git-scm.com/downloads
-- Python https://www.python.org/downloads/
+- GIT https://git-scm.com/downloads (default installation)
+- Python https://www.python.org/downloads/ (on first page, select `Add python.exe to PATH`)
 
-Afterward, open a shell (Windows start menu: `Git Bash`) and type (enter after each line):
+Afterward, open a shell in the desired location e.g. Documents folder (right click => open terminal). Then type (or paste with right click) and press enter:
 
 ```commandline
-cd <install path>
 git clone https://github.com/Nikkulin3/hipster-hits.git
-cd hipster-hits
-install.bat
 ```
+Now a folder `hipster-hits` will be generated.
+To install or update the repository, double-click the `install.bat` file.
 
-Now you need a Spotify API Key. Visit [this page](https://developer.spotify.com/documentation/web-api/tutorials/getting-started) to read how. You will need to setup a "Spotify Developer Account" and create an "App". Under section "request an access token" is more information how to obtain your `Client ID` and `Client Secret`. For quick reference after project creation is done:
+Now you need a Spotify API Key. Visit [this page](https://developer.spotify.com/documentation/web-api/tutorials/getting-started) to read how. You will need to set up a "Spotify Developer Account" and create an "App". Under section "request an access token" is more information how to obtain your `Client ID` and `Client Secret`. For quick reference after project creation is done:
 
 - Visit https://developer.spotify.com/dashboard/ (or log in and click the link again)
 - Click on the name of your app and go to `Settings`
@@ -30,10 +29,9 @@ Now you need a Spotify API Key. Visit [this page](https://developer.spotify.com/
 - Click on `View client secret` to display the `Client Secret`
 - Note the `Client Secret`
 
-After obtaining `Client ID` and `Client Secret`, paste the them into the file `generate.bat` on your computer at the appropriate positions.
-
+After obtaining `Client ID` and `Client Secret`, paste them into the file `generate.bat` on your computer.
 
 ## Usage
 
-- Right click file `generate.bat->Edit` (or open with text editor) and change Spotify Playlist URL, then save.
+- Right click file `generate.bat->more options->edit` (or open with text editor) and change Spotify Playlist URL, then save.
 - Double click file `generate.bat`, the output PDF will be in the `output` folder.

@@ -10,14 +10,12 @@ import json
 import segno
 from fpdf import FPDF, Align
 from spotipy.oauth2 import SpotifyClientCredentials
-from PIL import Image, ImageDraw, ImageFont
 import drawsvg as draw
 
 
 class Song:
     QR_SCALE = 10
     IMAGE_SIZE = None
-    FONT = ImageFont.truetype("DejaVuSans.ttf", 20)
 
     def __init__(self, track: dict):
         self.data = track
