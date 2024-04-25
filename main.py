@@ -4,13 +4,14 @@ import re
 import sys
 import textwrap
 import warnings
-
+import drawsvg as draw
 import spotipy
 import json
 import segno
 from fpdf import FPDF, Align
 from spotipy.oauth2 import SpotifyClientCredentials
-import drawsvg as draw
+from svglib.svglib import svg2rlg
+from reportlab.graphics import renderPDF, renderPM
 
 
 class Song:
@@ -51,17 +52,20 @@ class Song:
             )
             d.append(svg_text)
 
-        outfile = f"cache/{playlist_id}/{self.id}_text.png"
-        if use_cached and os.path.exists(outfile):
+        outfile_png = f"cache/{playlist_id}/{self.id}_text.png"
+        outfile_svg = outfile_png.replace(".png", ".svg")
+        if use_cached and os.path.exists(outfile_png):
             return
 
         d = draw.Drawing(W, H, origin="center")
-        # d.append(draw.Rectangle(x=-W / 2, y=-W / 2, width=W, height=H, stroke='gray', fill='none'))
+        # d.append(draw.Rectangle(x=-W / 2, y=-W / 2, width=W, height=H, stroke='none', fill='grey'))
         add_text(0.5, 0.2, self.artist, 30, max_lines=2)
         add_text(0.5, 0.55, self.release, 100)
         add_text(0.5, 0.7, self.name, 20)
         add_text(0.5, 0.85, self.album, 15)
-        d.save_png(outfile)
+        d.save_svg(outfile_svg)
+        d = svg2rlg(outfile_svg)
+        renderPM.drawToFile(d, outfile_png)
 
     @property
     def id(self) -> str:

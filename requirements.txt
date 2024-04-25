@@ -3,3 +3,6 @@ spotipy
 segno
 fpdf2
 drawsvg[raster]~=2.0
+svglib
+reportlab
+rl-renderPM
