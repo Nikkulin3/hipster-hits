@@ -29,10 +29,14 @@ Now you need a Spotify API Key. Visit [this page](https://developer.spotify.com/
 - Click on `View client secret` to display the `Client Secret`
 - Note the `Client Secret`
 
-After obtaining `Client ID` and `Client Secret`, paste them into the file `generate.bat` on your computer.
+After obtaining `Client ID` and `Client Secret`, right click file `generate.bat->more options->edit` (or open with text editor) and edit the specified text fields.
 
 ## Usage
 
 - Right click file `generate.bat->more options->edit` (or open with text editor) and change Spotify Playlist URL, then save.
 - Double click file `generate.bat`, the output PDF will be in the `output` folder.
 - Song information and images are being cached locally, start fresh (playlist update, etc.) with deleting the `cache` folder.
+
+## Printing
+
+The intended use of the PDF-files is to print them double-sided (length-wise), Only then will QR-codes and text line up automagically.
