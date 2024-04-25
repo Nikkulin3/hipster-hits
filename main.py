@@ -1,6 +1,7 @@
 import glob
 import os
 import re
+import sys
 import textwrap
 import warnings
 
@@ -233,13 +234,17 @@ class PDFCreator:
             except StopIteration:
                 break
         pdf.output(outfile)
-        print(outfile)
+        print(f"file saved at: {outfile}")
 
 
 def main():
-    playlist = Playlist(
-        "https://open.spotify.com/playlist/37i9dQZF1DX1tz6EDao8it?si=b7d541eff8fe49a2"
-    )
+    args = sys.argv
+    if len(args) < 2:
+        print(
+            "usage: python main.py https://link/to/spotify/playlist OR python main.py <playlist_id>"
+        )
+        raise ValueError("no playlist specified")
+    playlist = Playlist(args[1])
     print(playlist)
     playlist.generate_pdf()
 
