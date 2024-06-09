@@ -163,7 +163,7 @@ class Playlist:
     def generate_pdf(self):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            PDFCreator(self).generate_pdf(f"output/{self.playlist_id}--{self.name.replace('/','_').pdf")
+            PDFCreator(self).generate_pdf(f"output/{self.playlist_id}--{self.name.replace('/','_')}.pdf")
 
     @staticmethod
     def id_from_url(url):
