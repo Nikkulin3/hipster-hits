@@ -133,7 +133,7 @@ class Playlist:
     def href(self) -> str:
         return self.json_data["external_urls"]["spotify"]
 
-    def extract_json(self, use_cached: bool = True):
+    def extract_json(self, use_cached: bool = False):
         json_cached_file = f"cache/{self.playlist_id}_raw.json"
         for folder in ["cache", "output", f"cache/{self.playlist_id}"]:
             if not os.path.exists(folder):
@@ -146,6 +146,13 @@ class Playlist:
         except FileNotFoundError:
             sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
             self.json_data = sp.playlist(self.playlist_id)
+            next_ = self.json_data["tracks"]["next"]
+            result = self.json_data["tracks"]
+            while next_ is not None:
+                result = sp.next(result)
+                next_ = result["next"]
+                self.json_data["tracks"]["items"] += result["items"]
+            self.json_data["tracks"]["next"] = None
             with open(json_cached_file, "w") as f:
                 json.dump(self.json_data, f)
 
@@ -163,7 +170,9 @@ class Playlist:
     def generate_pdf(self):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            PDFCreator(self).generate_pdf(f"output/{self.playlist_id}--{self.name.replace('/','_')}.pdf")
+            PDFCreator(self).generate_pdf(
+                f"output/{self.playlist_id}--{self.name.replace('/', '_')}.pdf"
+            )
 
     @staticmethod
     def id_from_url(url):
