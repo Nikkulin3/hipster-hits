@@ -207,7 +207,7 @@ class Playlist:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             PDFCreator(self).generate_pdf(
-                f"output/{self.path_safe_name}_{self.playlist_id}"
+                f"output/{self.path_safe_name}_{self.playlist_id}.pdf"
             )
 
     @staticmethod
