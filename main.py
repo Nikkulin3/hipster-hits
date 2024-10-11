@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import textwrap
+import unicodedata
 import warnings
 from typing import Generator, Union
 
@@ -29,7 +30,8 @@ class Song:
             qr = segno.make_qr(self.href)
             qr.save(pth, kind="svg")
 
-    def save_text(self, playlist_id: str, use_cached: bool = True):
+    def save_text(self, playlist_id: str, use_cached: bool = False):
+        # use_cached must be set to false if manual json edits are allowed
         W = H = 400
         scaling = 1 / 370 * W
 
@@ -80,7 +82,7 @@ class Song:
 
     @property
     def href(self) -> str:
-        return self.data["external_urls"]["spotify"]
+        return self.data["url"]
 
     @property
     def name(self) -> str:
@@ -88,18 +90,15 @@ class Song:
 
     @property
     def album(self) -> str:
-        return self.data["album"]["name"]
+        return self.data["album"]
 
     @property
     def release(self) -> str | None:
-        try:
-            return self.data["album"]["release_date"][:4]
-        except TypeError:
-            return None
+        return self.data["release"]
 
     @property
     def artist(self) -> str:
-        return ", ".join([artist["name"] for artist in self.data["artists"][:2]])
+        return self.data["artist"]
 
     @property
     def popularity(self) -> str:
@@ -110,6 +109,22 @@ class Song:
             f"{self.release} - '{self.name}' von '{self.artist}' "
             f"(Album: '{self.album}', Popularität: {self.popularity}, Url: {self.href})"
         )
+
+    @staticmethod
+    def get_simplified_data(data):
+        try:
+            release = data["album"]["release_date"][:4]
+        except TypeError:
+            release = None
+        return {
+            "id": data["id"],
+            "url": data["external_urls"]["spotify"],
+            "artist": ", ".join([artist["name"] for artist in data["artists"][:2]]),
+            "release": release,
+            "name": data["name"],
+            "album": data["album"]["name"],
+            "popularity": data["popularity"],
+        }
 
 
 class Playlist:
@@ -122,10 +137,21 @@ class Playlist:
             re.fullmatch("[a-zA-Z0-9]*", self.playlist_id)
             and len(self.playlist_id) == 22
         ), f"invalid playlist id provided"
-        self.json_data = {}
-        self.extract_json()
-
-        tracks = [Song(item["track"]) for item in self.json_data["tracks"]["items"]]
+        self.json_data = self.get_cache_data()
+        if self.json_data is None:
+            playlist_data = self.poll_spotify()
+            self.json_data = {
+                "name": playlist_data["name"],
+                "href": playlist_data["external_urls"]["spotify"],
+                "tracks": [
+                    Song.get_simplified_data(item["track"])
+                    for item in playlist_data["tracks"]["items"]
+                ],
+            }
+            json_cached_file = f"cache/{self.playlist_id}_raw.json"
+            with open(json_cached_file, "w") as f:
+                json.dump(self.json_data, f, indent=4)
+        tracks = [Song(s) for s in self.json_data["tracks"]]
         self.tracks = {tr.id: tr for tr in tracks if tr.release is not None}
 
     @property
@@ -133,10 +159,14 @@ class Playlist:
         return self.json_data["name"]
 
     @property
-    def href(self) -> str:
-        return self.json_data["external_urls"]["spotify"]
+    def path_safe_name(self) -> str:
+        return slugify(self.name)
 
-    def extract_json(self, use_cached: bool = False):
+    @property
+    def href(self) -> str:
+        return self.json_data["href"]
+
+    def get_cache_data(self, use_cached: bool = True) -> dict | None:
         json_cached_file = f"cache/{self.playlist_id}_raw.json"
         for folder in ["cache", "output", f"cache/{self.playlist_id}"]:
             if not os.path.exists(folder):
@@ -145,19 +175,22 @@ class Playlist:
             if not use_cached:
                 os.remove(json_cached_file)
             with open(json_cached_file, "r") as f:
-                self.json_data = json.load(f)
+                json_data = json.load(f)
         except FileNotFoundError:
-            sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
-            self.json_data = sp.playlist(self.playlist_id)
-            next_ = self.json_data["tracks"]["next"]
-            result = self.json_data["tracks"]
-            while next_ is not None:
-                result = sp.next(result)
-                next_ = result["next"]
-                self.json_data["tracks"]["items"] += result["items"]
-            self.json_data["tracks"]["next"] = None
-            with open(json_cached_file, "w") as f:
-                json.dump(self.json_data, f)
+            return None
+        return json_data
+
+    def poll_spotify(self):
+        sp = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
+        json_data = sp.playlist(self.playlist_id)
+        next_ = json_data["tracks"]["next"]
+        result = json_data["tracks"]
+        while next_ is not None:
+            result = sp.next(result)
+            next_ = result["next"]
+            json_data["tracks"]["items"] += result["items"]
+        json_data["tracks"]["next"] = None
+        return json_data
 
     def save_qr_codes(self):
         for track in self.tracks.values():
@@ -174,7 +207,7 @@ class Playlist:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             PDFCreator(self).generate_pdf(
-                f"output/{self.playlist_id}--{self.name.replace('/', '_')}.pdf"
+                f"output/{self.path_safe_name}_{self.playlist_id}"
             )
 
     @staticmethod
@@ -252,6 +285,27 @@ class PDFCreator:
                 pass
         pdf.output(outfile)
         print(f"file saved at: {outfile}")
+
+
+def slugify(value, allow_unicode=False):
+    """
+    Taken from https://github.com/django/django/blob/master/django/utils/text.py
+    Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
+    dashes to single dashes. Remove characters that aren't alphanumerics,
+    underscores, or hyphens. Convert to lowercase. Also strip leading and
+    trailing whitespace, dashes, and underscores.
+    """
+    value = str(value)
+    if allow_unicode:
+        value = unicodedata.normalize("NFKC", value)
+    else:
+        value = (
+            unicodedata.normalize("NFKD", value)
+            .encode("ascii", "ignore")
+            .decode("ascii")
+        )
+    value = re.sub(r"[^\w\s-]", "", value.lower())
+    return re.sub(r"[-\s]+", "-", value).strip("-_")
 
 
 def main():
