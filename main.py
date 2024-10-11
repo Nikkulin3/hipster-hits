@@ -91,8 +91,11 @@ class Song:
         return self.data["album"]["name"]
 
     @property
-    def release(self) -> str:
-        return self.data["album"]["release_date"][:4]
+    def release(self) -> str | None:
+        try:
+            return self.data["album"]["release_date"][:4]
+        except TypeError:
+            return None
 
     @property
     def artist(self) -> str:
@@ -123,7 +126,7 @@ class Playlist:
         self.extract_json()
 
         tracks = [Song(item["track"]) for item in self.json_data["tracks"]["items"]]
-        self.tracks = {tr.id: tr for tr in tracks}
+        self.tracks = {tr.id: tr for tr in tracks if tr.release is not None}
 
     @property
     def name(self) -> str:
