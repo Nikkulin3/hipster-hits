@@ -72,7 +72,8 @@ class Song:
         add_text(0.5, 0.2, self.artist, 30, max_lines=2)
         add_text(0.5, 0.55, self.release, 100)
         add_text(0.5, 0.7, self.name, 20)
-        add_text(0.5, 0.85, self.album, 15)
+        if self.name != self.album:
+            add_text(0.5, 0.85, self.album, 15)
         d.save_svg(outfile_svg)
         d = svg2rlg(outfile_svg)
         renderPM.drawToFile(d, outfile_png)
