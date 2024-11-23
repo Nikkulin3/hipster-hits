@@ -1,20 +1,21 @@
+from collections.abc import Generator
 import glob
+import json
 import os
 import re
 import sys
 import textwrap
 import unicodedata
 import warnings
-from typing import Generator, Union
 
 import drawsvg as draw
-import spotipy
-import json
+from fpdf import Align
+from fpdf import FPDF
+from reportlab.graphics import renderPM
 import segno
-from fpdf import FPDF, Align
+import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from svglib.svglib import svg2rlg
-from reportlab.graphics import renderPDF, renderPM
 
 
 class Song:
@@ -174,7 +175,7 @@ class Playlist:
         try:
             if not use_cached:
                 os.remove(json_cached_file)
-            with open(json_cached_file, "r") as f:
+            with open(json_cached_file) as f:
                 json_data = json.load(f)
         except FileNotFoundError:
             return None
@@ -252,7 +253,7 @@ class PDFCreator:
                     break
             return (img for img in out)
 
-        def add_img(img: str, pos: Union[Align, float]):
+        def add_img(img: str, pos: Align | float):
             if img is None:
                 return
             pdf.image(img, w=w, h=w, x=pos, y=margin + row * w)
