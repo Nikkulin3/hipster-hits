@@ -1,0 +1,9 @@
+services:
+  hipster-hits:
+    userns_mode: keep-id
+    build: .
+    environment:
+      - SPOTIPY_CLIENT_ID
+      - SPOTIPY_CLIENT_SECRET
+    volumes:
+      - .:/workspace
