@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "hipster-hits"
+version = "1.0.0"
+description = ""
+authors = []
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+spotipy = "^2.24.0"
+svglib = "^1.5.1"
+drawsvg = {extras = ["raster"], version = "^2.4.0"}
+reportlab = "^4.2.5"
+segno = "^1.6.1"
+fpdf2 = "^2.8.1"
+rl-renderpm = "^4.0.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
